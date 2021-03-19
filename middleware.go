@@ -25,7 +25,17 @@ func Middleware(fn func(http.ResponseWriter, *http.Request), o ServerOptions) ht
 		next = throttle(next, o)
 	}
 	if o.CORS {
-		next = cors.Default().Handler(next)
+		// next = cors.Default().Handler(next)
+		next = cors.New(cors.Options{
+			AllowedOrigins: []string{"*"},
+			AllowedMethods: []string{
+				http.MethodGet,
+				http.MethodPost,
+			},
+			AllowedHeaders:   []string{"Authorization"},
+			AllowCredentials: true,
+			// Debug: true,
+		}).Handler(next)
 	}
 	if o.APIKey != "" {
 		next = authorizeClient(next, o)
@@ -87,7 +97,7 @@ func throttle(next http.Handler, o ServerOptions) http.Handler {
 
 func validate(next http.Handler, o ServerOptions) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		if r.Method != http.MethodGet && r.Method != http.MethodPost && (r.Method != http.MethodOptions && o.CORS) {
 			ErrorReply(r, w, ErrMethodNotAllowed, o)
 			return
 		}
